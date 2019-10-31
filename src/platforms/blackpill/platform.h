@@ -29,10 +29,6 @@
 #include "timing_stm32.h"
 #include "version.h"
 
-#include <libopencm3/cm3/common.h>
-#include <libopencm3/stm32/f1/memorymap.h>
-#include <libopencm3/usb/usbd.h>
-
 #ifdef ENABLE_DEBUG
 # define PLATFORM_HAS_DEBUG
 # define USBUART_DEBUG
@@ -72,9 +68,6 @@
 #define PLATFORM_HAS_TRACESWO	1
 #define NUM_TRACE_PACKETS		(128)		/* This is an 8K buffer */
 
-#define SWD_CR					GPIO_CRH(SWDIO_PORT)
-#define SWD_CR_MULT				(1 << ((SWDIO_PIN - 8) << 2))
-
 #define TMS_SET_MODE() \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
 
@@ -106,7 +99,7 @@
 #define USBUSART_CLK			RCC_USART3
 #define USBUSART_PORT			GPIOB
 #define USBUSART_TX_PIN			GPIO10
-#define USBUSART_ISR			usart2_isr
+#define USBUSART_ISR			usart3_isr
 #define USBUSART_TIM			TIM4
 #define USBUSART_TIM_CLK_EN()	rcc_periph_clock_enable(RCC_TIM4)
 #define USBUSART_TIM_IRQ		NVIC_TIM4_IRQ

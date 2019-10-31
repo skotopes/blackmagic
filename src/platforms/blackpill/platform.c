@@ -26,19 +26,19 @@
 #include "cdcacm.h"
 #include "usbuart.h"
 
-#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/scs.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
-#include <libopencm3/stm32/adc.h>
+#include <libopencm3/stm32/f1/adc.h>
 
 uint8_t running_status;
 
 int platform_hwversion(void)
 {
-	return 0;
+	return 1;
 }
 
 void platform_init(void)
@@ -49,6 +49,9 @@ void platform_init(void)
 	initialise_monitor_handles();
 #endif
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
+
+	rcc_periph_clock_enable(RCC_AFIO);
+	rcc_periph_clock_enable(RCC_CRC);
 
 #ifdef SELF_SWD_DISABLE
 	gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF, 0);
@@ -72,9 +75,7 @@ void platform_init(void)
 
 	platform_timing_init();
 	cdcacm_init();
-	/* Don't enable UART if we're being debugged. */
-	if (!(SCS_DEMCR & SCS_DEMCR_TRCENA))
-		usbuart_init();
+	usbuart_init();
 }
 
 void platform_srst_set_val(bool assert)
@@ -97,5 +98,5 @@ bool platform_srst_get_val()
 
 const char *platform_target_voltage(void)
 {
-	return "unknown";
+	return "ABSENT!";
 }
