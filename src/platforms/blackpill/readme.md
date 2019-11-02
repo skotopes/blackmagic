@@ -6,20 +6,20 @@
 	                   N L I 3
 	                   D K O V
 	             /-----| | | |-----\
-	Activity LED - B12   A A   B11 - RX  USART
-	         TDI - B13   1 1   B10 - TX  USART
-	         TDO - B14   4 3    B1 - LED USART
-	         TCK - B15          B0 - 
-	         TMS - A8           A7 - 
-	      SWO TX - A9           A6 - 
-	      SWO RX - A10          A5 - 
+	Activity LED - B12   A A   B11 -
+	             - B13   1 1   B10 -
+	             - B14   4 3    B1 -
+	             - B15          B0 - 
+	             - A8           A7 - 
+	             - A9           A6 - 
+	             - A10          A5 - 
 	Reserved USB - A11          A4 - 
-	Reserved USB - A12          A3 - 
-	        SRST - A15          A2 - 
-	             - B3           A1 - 
-	             - B4           A0 - 
+	Reserved USB - A12          A3 - SWO RX
+	         TDI - A15          A2 - 
+	         TDO - B3           A1 - 
+	        JRST - B4           A0 - 
 	             - B5          RST - 
-	             - B6         PC13 - 
+	          TX - B6         PC13 - 
 	             - B7           B9 - 
 	             - 3.3V         B8 - 
 	             - GND         GND - 

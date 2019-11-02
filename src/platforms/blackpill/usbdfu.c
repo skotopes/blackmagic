@@ -24,35 +24,49 @@
 #include <libopencm3/cm3/scb.h>
 
 #include "usbdfu.h"
-#include "general.h"
 #include "platform.h"
 
 uint32_t app_address = 0x08002000;
 
 void dfu_detach(void)
 {
-	/* Disconnect USB cable by resetting USB Device and pulling USB_DP low*/
+	/* Disconnect USB cable by resetting USB Device
+	   and pulling USB_DP low*/
 	rcc_periph_reset_pulse(RST_USB);
 	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_clock_enable(RCC_GPIOA);
-
 	gpio_clear(GPIOA, GPIO12);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
-
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 	scb_reset_system();
 }
 
 int main(void)
 {
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO2);
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_GPIOC);
+	rcc_periph_clock_enable(RCC_USB);
 
-	if (!(GPIOA_CRL & 0x40) && !gpio_get(GPIOB, GPIO2))
+	// LED pin setup
+	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
+	gpio_set(LED_PORT, LED_IDLE_RUN);
+	// USB output pin setup and reset
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+	gpio_clear(GPIOA, GPIO12);
+	rcc_periph_reset_pulse(RST_USB);
+	rcc_periph_clock_enable(RCC_USB);
+
+	bool normal_boot = 0;
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO2);
+	normal_boot = !(gpio_get(GPIOB, GPIO2));
+
+	if(((GPIOA_CRL & 0x40) == 0x40) && normal_boot)
 		dfu_jump_app_if_valid();
 
 	dfu_protect(DFU_MODE);
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
-
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 
@@ -60,6 +74,7 @@ int main(void)
 	systick_counter_enable();
 
 	dfu_init(&st_usbfs_v1_usb_driver, DFU_MODE);
+
 	dfu_main();
 }
 
@@ -69,5 +84,5 @@ void dfu_event(void)
 
 void sys_tick_handler(void)
 {
-	gpio_toggle(LED_PORT, LED_PIN);
+	gpio_toggle(LED_PORT, LED_IDLE_RUN);
 }

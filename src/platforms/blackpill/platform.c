@@ -18,8 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the ST-Link
- * implementation.
+/* This file implements the platform specific functions for ST-Link
+ * on the STM8S discovery and STM32F103 Minimum System Development Board, also
+ * known as bluepill.
  */
 
 #include "general.h"
@@ -34,8 +35,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
 
-uint8_t running_status;
-
 int platform_hwversion(void)
 {
 	return 1;
@@ -43,6 +42,7 @@ int platform_hwversion(void)
 
 void platform_init(void)
 {
+	uint32_t data;
 	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
 #ifdef ENABLE_DEBUG
 	void initialise_monitor_handles(void);
@@ -50,24 +50,51 @@ void platform_init(void)
 #endif
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
+	/* Enable peripherals */
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_GPIOC);
+
+	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
 
-#ifdef SELF_SWD_DISABLE
-	gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF, 0);
-#endif
+	// LED pin setup
+	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
+	gpio_set(LED_PORT, LED_IDLE_RUN);
+	// USB output pin setup and reset
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+	gpio_clear(GPIOA, GPIO12);
+	rcc_periph_reset_pulse(RST_USB);
+	rcc_periph_clock_enable(RCC_USB);
 
-	/* Setup GPIO ports */
+	/* Unmap JTAG Pins so we can reuse as GPIO */
+	data = AFIO_MAPR;
+	data &= ~AFIO_MAPR_SWJ_MASK;
+	data |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF;
+	AFIO_MAPR = data;
+	
+	/* Setup JTAG GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_INPUT_FLOAT, TMS_PIN);
 	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
 	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
+	gpio_set_mode(TDO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, TDO_PIN);
 
-	gpio_set_mode(SWDIO_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_INPUT_FLOAT, SWDIO_PIN);
-	gpio_set_mode(SWCLK_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, SWCLK_PIN);
+	/* Enable MCO Out on PA8*/
+	RCC_CFGR &= ~(0xf << 24);
+	RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 
 	platform_srst_set_val(false);
 
-	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_PIN);
+	/* Remap TIM2 TIM2_REMAP[1]
+	 * TIM2_CH1_ETR -> PA15 (TDI, set as output above)
+	 * TIM2_CH2     -> PB3  (TDO)
+	 */
+	data = AFIO_MAPR;
+	data &= ~AFIO_MAPR_TIM2_REMAP_FULL_REMAP;
+	data |=  AFIO_MAPR_TIM2_REMAP_PARTIAL_REMAP1;
+	AFIO_MAPR = data;
 
 	/* Relocate interrupt vector table here */
 	extern int vector_table;
@@ -80,23 +107,33 @@ void platform_init(void)
 
 void platform_srst_set_val(bool assert)
 {
+	/* We reuse JSRST as SRST.*/
 	if (assert) {
-		gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, SRST_PIN);
-		gpio_clear(SRST_PORT, SRST_PIN);
-		while (gpio_get(SRST_PORT, SRST_PIN)) {};
+		gpio_set_mode(JRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+		              GPIO_CNF_OUTPUT_OPENDRAIN, JRST_PIN);
+		/* Wait until requested value is active.*/
+		while (gpio_get(JRST_PORT, JRST_PIN))
+			gpio_clear(JRST_PORT, JRST_PIN);
 	} else {
-		gpio_set_mode(SRST_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, SRST_PIN);
-		gpio_set(SRST_PORT, SRST_PIN);
-		while (!gpio_get(SRST_PORT, SRST_PIN)) {};
+		gpio_set_mode(JRST_PORT, GPIO_MODE_INPUT,
+					  GPIO_CNF_INPUT_PULL_UPDOWN, JRST_PIN);
+		/* Wait until requested value is active.*/
+		while (!gpio_get(JRST_PORT, JRST_PIN))
+			gpio_set(JRST_PORT, JRST_PIN);
 	}
 }
 
-bool platform_srst_get_val()
+bool platform_srst_get_val(void)
 {
-	return gpio_get(SRST_PORT, SRST_PIN) == 0;
+	return gpio_get(JRST_PORT, JRST_PIN) == 0;
 }
 
 const char *platform_target_voltage(void)
 {
-	return "ABSENT!";
+	return "Not supported";
+}
+
+void set_idle_state(int state)
+{
+	gpio_set_val(LED_PORT, LED_IDLE_RUN, state);
 }
