@@ -43,10 +43,15 @@ void dfu_detach(void)
 
 int main(void)
 {
+	rcc_clock_setup_in_hse_8mhz_out_72mhz();
+
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOC);
+
 	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_AFIO);
+	rcc_periph_clock_enable(RCC_CRC);
 
 	// LED pin setup
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
@@ -66,7 +71,6 @@ int main(void)
 
 	dfu_protect(DFU_MODE);
 
-	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 

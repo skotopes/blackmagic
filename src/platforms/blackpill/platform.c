@@ -48,6 +48,7 @@ void platform_init(void)
 	void initialise_monitor_handles(void);
 	initialise_monitor_handles();
 #endif
+
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
 	/* Enable peripherals */
@@ -68,12 +69,9 @@ void platform_init(void)
 	rcc_periph_reset_pulse(RST_USB);
 	rcc_periph_clock_enable(RCC_USB);
 
-	/* Unmap JTAG Pins so we can reuse as GPIO */
-	data = AFIO_MAPR;
-	data &= ~AFIO_MAPR_SWJ_MASK;
-	data |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF;
-	AFIO_MAPR = data;
-	
+	/* Unmap JTAG Pins so we can reuse as GPIO */	
+	gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, 0);
+
 	/* Setup JTAG GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_INPUT_FLOAT, TMS_PIN);
 	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);

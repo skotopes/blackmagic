@@ -41,10 +41,12 @@
 #define DFU_IDENT			"Black Magic Firmware Upgrade (BlackPill)"
 #define UPD_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Kg"
 
+#define DISABLE_SWIDIO
+
 /* Hardware definitions... */
-#define TMS_PORT		GPIOA
+#define TMS_PORT		GPIOB
 #define TMS_PIN			GPIO13
-#define TCK_PORT		GPIOA
+#define TCK_PORT		GPIOB
 #define TCK_PIN			GPIO14
 #define TDI_PORT		GPIOA
 #define TDI_PIN			GPIO15
